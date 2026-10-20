@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#2f5d8a">
+<title>CV Builder · a clean resume in the browser, no account</title>
+<meta name="description" content="Build a one or two page CV in the browser and print it as a real A4 or Letter PDF. No account, no watermark, no paywall at the download button, and nothing you type is uploaded.">
+<meta name="author" content="Kristian Mario Miskovic (TekiDeki)">
+<meta name="robots" content="index, follow">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+<style id="pageCss">@page{size:A4;margin:0}</style>
+<script>
+/* Paint the stored theme before the body exists, so a reload never flashes. */
+(function () {
+  try {
+    var saved = localStorage.getItem('cv-builder.theme');
+    var dark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+}());
+</script>
+</head>
+<body>
+
+<a class="skip" href="#editor" data-i18n="skip">Skip to the form</a>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#editor">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="22" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11.5 11h9M11.5 15.5h9M11.5 20h5.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+      <span class="brand-text">CV<span class="brand-dot">.</span>Builder</span>
+    </a>
+    <div class="tools">
+      <label class="sr" for="lang" data-i18n="uiLanguage">Interface language</label>
+      <select id="lang" class="select"></select>
+      <button id="theme" class="iconbtn" type="button" data-i18n-aria-label="theme" aria-label="Switch theme">
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+
+  <section class="editor" id="editor" aria-label="Editor">
+    <div class="panel intro-panel">
+      <h1 data-i18n="h1">A CV that prints, without the paywall</h1>
+      <p class="lede" data-i18n="lede">Fill the form, watch the page, print it as PDF. No account, no watermark, and the file is yours: the words never leave this tab.</p>
+      <div class="actions">
+        <button id="btn-sample" class="btn small" type="button" data-i18n="loadSample">Fill with an example</button>
+        <span class="hint" style="margin:0;align-self:center" data-i18n="sampleNote">The example is invented and safe to replace.</span>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2 data-i18n="whoTitle">Who you are</h2>
+      <div class="grid2">
+        <label class="field"><span data-i18n="fullName">Full name</span><input id="p-name" type="text" autocomplete="name" placeholder="Ana Petrović"></label>
+        <label class="field"><span data-i18n="role">The job you want</span><input id="p-title" type="text" placeholder="Product designer"></label>
+        <label class="field"><span data-i18n="email">Email</span><input id="p-email" type="email" autocomplete="email" placeholder="ana@example.com"></label>
+        <label class="field"><span data-i18n="phone">Phone</span><input id="p-phone" type="tel" autocomplete="tel" placeholder="+381 60 123 4567"></label>
+        <label class="field"><span data-i18n="city">City</span><input id="p-city" type="text" placeholder="Vršac, Serbia"></label>
+        <label class="field"><span data-i18n="web">Link</span><input id="p-web" type="text" placeholder="linkedin.com/in/ana"></label>
+      </div>
+      <div class="photo-row">
+        <label class="field"><span data-i18n="photo">Photo, optional</span><input id="p-photo" type="file" accept="image/*"></label>
+        <button id="p-photo-clear" class="btn ghost" type="button" data-i18n="photoClear">Remove photo</button>
+      </div>
+      <p class="hint" data-i18n="photoHint">A photo is normal in Serbia and most of the Balkans, and unwanted in Britain and the United States. The two column and banner layouts show it, the classic one does not.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="summaryTitle">In one paragraph</h2>
+      <label class="field"><span data-i18n="summaryLabel">What you do and what you are good at</span>
+        <textarea id="p-summary" rows="4" placeholder="Product designer with six years in e-commerce, focused on checkout flows and design systems."></textarea>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="expTitle">Experience</h2>
+        <button class="btn small" type="button" id="add-exp" data-i18n="addJob">Add a job</button>
+      </div>
+      <div id="exp-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="eduTitle">Education</h2>
+        <button class="btn small" type="button" id="add-edu" data-i18n="addEdu">Add a school</button>
+      </div>
+      <div id="edu-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="skillsTitle">Skills</h2>
+      <label class="field"><span data-i18n="skillsLabel">Separated by commas</span>
+        <input id="p-skills" type="text" placeholder="Figma, design systems, HTML, CSS">
+      </label>
+      <div class="panel-head tight">
+        <h2 data-i18n="langTitle">Languages</h2>
+        <button class="btn small" type="button" id="add-lang" data-i18n="addLang">Add a language</button>
+      </div>
+      <div id="lang-list" class="entries"></div>
+      <div class="panel-head tight">
+        <h2 data-i18n="certTitle">Certificates</h2>
+        <button class="btn small" type="button" id="add-cert" data-i18n="addCert">Add a certificate</button>
+      </div>
+      <div id="cert-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="lookTitle">How it looks</h2>
+      <div class="grid2">
+        <label class="field"><span data-i18n="template">Layout</span>
+          <select id="o-template">
+            <option value="classic" data-i18n="tplClassic">Classic, safest for robots</option>
+            <option value="column" data-i18n="tplColumn">Two columns</option>
+            <option value="banner" data-i18n="tplBanner">Banner across the top</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="docLang">Language of the CV</span>
+          <select id="o-doclang">
+            <option value="en">English</option>
+            <option value="ro">Română</option>
+            <option value="sr-latn">Srpski</option>
+            <option value="sr-cyrl">Српски</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="paper">Paper</span>
+          <select id="o-page">
+            <option value="a4">A4, 210 × 297 mm</option>
+            <option value="letter">US Letter, 8.5 × 11 in</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="typeface">Typeface</span>
+          <select id="o-font">
+            <option value="sans" data-i18n="fontSans">Sans, modern</option>
+            <option value="serif" data-i18n="fontSerif">Serif, formal</option>
+          </select>
+        </label>
+      </div>
+      <div class="swatches" role="group" aria-label="Accent">
+        <button class="swatch on" type="button" data-accent="#2f5d8a" style="--c:#2f5d8a" aria-label="Steel blue"></button>
+        <button class="swatch" type="button" data-accent="#1f6f5c" style="--c:#1f6f5c" aria-label="Green"></button>
+        <button class="swatch" type="button" data-accent="#8a3b2f" style="--c:#8a3b2f" aria-label="Brick"></button>
+        <button class="swatch" type="button" data-accent="#3b3b3b" style="--c:#3b3b3b" aria-label="Graphite"></button>
+      </div>
+    </section>
+
+    <section class="panel data-panel">
+      <h2 data-i18n="dataTitle">Your file</h2>
+      <p class="hint" data-i18n="dataHint">The CV is saved in this browser as you type. Export a copy to keep it, or to move it to another computer.</p>
+      <div class="actions">
+        <button id="btn-json" class="btn" type="button" data-i18n="exportJson">Export a copy</button>
+        <label class="btn file-btn"><span data-i18n="importJson">Open a copy</span><input id="import-json" type="file" accept="application/json"></label>
+        <button id="btn-clear" class="btn ghost" type="button" data-i18n="clearAll">Start from blank</button>
+      </div>
+    </section>
+  </section>
+
+  <section class="viewer" aria-label="Preview">
+    <div class="viewer-bar">
+      <span class="pages" id="pages" aria-live="polite"></span>
+      <button id="btn-print" class="btn primary" type="button" data-i18n="printIt">Print or save as PDF</button>
+    </div>
+    <p class="hint print-hint" data-i18n="printHint">In the print dialog pick "Save as PDF", paper A4 or Letter, margins none, and keep the scale at 100 percent.</p>
+    <div class="stage" id="stage">
+      <article class="paper" id="paper"></article>
+    </div>
+  </section>
+</main>
+
+<section class="about wrap">
+  <h2 data-i18n="aboutTitle">Why it is free all the way to the download</h2>
+  <div class="about-grid">
+    <div>
+      <h3 data-i18n="about1Title">No paywall at the end</h3>
+      <p data-i18n="about1Body">The category has one loud complaint: build the CV for free, then find the PDF behind a card. Here the print button is the whole product, and it costs nothing.</p>
+    </div>
+    <div>
+      <h3 data-i18n="about2Title">No watermark, no account</h3>
+      <p data-i18n="about2Body">Nothing is stamped on your page, nothing is asked for your address, and no email is collected. There is no backend to collect it.</p>
+    </div>
+    <div>
+      <h3 data-i18n="about3Title">Text, not a picture</h3>
+      <p data-i18n="about3Body">The classic layout is one column of real text with real headings, so the machine that reads applications can read it too.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <p><span data-i18n="footerFree">Every tool here is free and stays free.</span> <a href="https://freehtml.dev">freehtml.dev</a> · <a href="https://github.com/TekiDeki/CV-Builder">GitHub</a></p>
+  </div>
+</footer>
+
+<script src="model.js"></script>
+<script src="i18n/locales.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

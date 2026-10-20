@@ -1,0 +1,41 @@
+{
+  "en": {
+    "summary": "Profile",
+    "experience": "Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "languages": "Languages",
+    "certifications": "Certificates",
+    "present": "Present",
+    "native": "Native",
+    "fluent": "Fluent",
+    "good": "Good",
+    "basic": "Basic"
+  },
+  "ro": {
+    "summary": "Profil",
+    "experience": "Experiență",
+    "education": "Educație",
+    "skills": "Competențe",
+    "languages": "Limbi",
+    "certifications": "Certificate",
+    "present": "Prezent",
+    "native": "Nativ",
+    "fluent": "Fluente",
+    "good": "Bune",
+    "basic": "De bază"
+  },
+  "sr-latn": {
+    "summary": "Profil",
+    "experience": "Iskustvo",
+    "education": "Obrazovanje",
+    "skills": "Veštine",
+    "languages": "Jezici",
+    "certifications": "Sertifikati",
+    "present": "Danas",
+    "native": "Maternji",
+    "fluent": "Tečno",
+    "good": "Dobro",
+    "basic": "Osnovno"
+  }
+}

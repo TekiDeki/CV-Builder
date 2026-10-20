@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en" data-version="1.0.0">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#2f5d8a">
+<title>CV Builder · a clean resume in the browser, no account</title>
+<meta name="description" content="Build a one or two page CV in the browser and print it as a real A4 or Letter PDF. No account, no watermark, no paywall at the download button, and nothing you type is uploaded.">
+<meta name="author" content="Kristian Mario Miskovic (TekiDeki)">
+<meta name="robots" content="index, follow">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* CV Builder - TekiDeki
+   SPDX-License-Identifier: Apache-2.0
+   Two skins in one file: the editor, which follows the system theme, and the
+   paper, which is always white because it is going to a printer. */
+
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --surface-2:#eaeef4; --ink:#111a24; --muted:#5b6877;
+  --line:#d9e0e8; --accent:#2f5d8a; --accent-ink:#ffffff; --danger:#a43126;
+  --shadow:0 1px 2px rgba(17,26,36,.06),0 14px 34px -20px rgba(17,26,36,.45);
+  --r:14px; --r-sm:9px;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  /* paper */
+  --paper-w:210mm; --paper-h:297mm; --paper-pad:17mm;
+}
+html[data-theme="dark"]{
+  --bg:#0b0f14; --surface:#121a23; --surface-2:#18222d; --ink:#e9eef5; --muted:#9aa8b8;
+  --line:#26323f; --accent:#7fb3e0; --accent-ink:#08131d;
+  --shadow:0 1px 2px rgba(0,0,0,.55),0 20px 44px -26px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1400px;margin:0 auto;padding:0 20px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-999px}
+.skip:focus{left:12px;top:12px;z-index:30;background:var(--surface);padding:10px 14px;border-radius:8px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;justify-content:space-between;gap:12px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:650}
+.mark{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:var(--accent);color:var(--accent-ink)}
+.mark svg{width:20px;height:20px;fill:none;stroke:currentColor}
+.brand-dot{color:var(--accent)}
+.tools{display:flex;align-items:center;gap:8px}
+.select,.iconbtn{height:36px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;font:inherit}
+.select{padding:0 8px;max-width:150px}
+.iconbtn{width:36px;display:grid;place-items:center;cursor:pointer}
+.iconbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+html[data-theme="dark"] .moon{display:none}
+html[data-theme="light"] .sun{display:none}
+
+/* the two columns */
+.layout{display:grid;grid-template-columns:minmax(360px,520px) minmax(0,1fr);gap:24px;align-items:start;padding-top:22px;padding-bottom:30px}
+.editor{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 14px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 12px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.panel-head h2{margin:0}
+.panel-head.tight{margin-top:18px}
+.intro-panel h1{font-size:22px;margin:0 0 6px;letter-spacing:-.015em}
+.lede{margin:0;color:var(--muted);font-size:14.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:block;margin:0 0 10px}
+.field>span{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px}
+.field input,.field textarea,.field select{
+  width:100%;font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;
+}
+.field textarea{resize:vertical;line-height:1.5}
+.field input:focus,.field textarea:focus,.field select:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px;border-color:var(--accent)}
+.photo-row{display:flex;align-items:flex-end;gap:10px}
+.photo-row .field{flex:1;margin-bottom:0}
+.hint{margin:8px 0 0;color:var(--muted);font-size:13px}
+.entries{display:flex;flex-direction:column;gap:12px}
+.entry{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 11px 4px;background:color-mix(in srgb,var(--surface-2) 55%,var(--surface))}
+.entry .entry-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.entry .entry-n{font:600 12px/1 var(--mono);color:var(--muted)}
+.entry .row3{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.entry .row3 .wide{grid-column:1 / -1}
+.checkline{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--muted);margin:-2px 0 8px}
+.checkline input{width:16px;height:16px;accent-color:var(--accent)}
+.swatches{display:flex;gap:8px;margin-top:6px}
+.swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;background:var(--c);box-shadow:0 0 0 1px var(--line)}
+.swatch.on{border-color:var(--ink)}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  font:600 14px/1 var(--sans);padding:10px 13px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;
+}
+.btn:hover{border-color:var(--accent)}
+.btn.small{padding:7px 10px;font-size:13px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:disabled:hover{border-color:var(--line)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* viewer */
+.viewer{position:sticky;top:76px;min-width:0}
+.viewer-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.pages{font:600 13px/1 var(--mono);color:var(--muted)}
+.print-hint{margin:0 0 10px}
+.stage{
+  position:relative;width:100%;overflow:hidden;border-radius:6px;
+  background:var(--surface-2);border:1px solid var(--line);
+}
+.paper{
+  width:var(--paper-w);min-height:var(--paper-h);background:#fff;color:#101820;
+  padding:var(--paper-pad);transform-origin:top left;
+  box-shadow:0 10px 30px -14px rgba(0,0,0,.35);
+  font-size:10.2pt;line-height:1.45;
+}
+
+/* about + foot */
+.about{padding:26px 0 10px;border-top:1px solid var(--line);margin-top:10px}
+.about h2{font-size:19px;margin:0 0 12px;letter-spacing:-.01em}
+.about-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.about h3{margin:0 0 4px;font-size:14.5px}
+.about p{margin:0;color:var(--muted);font-size:14px}
+.foot{border-top:1px solid var(--line);margin-top:10px;padding:16px 0 30px;color:var(--muted);font-size:13.5px}
+.foot a{color:var(--accent)}
+
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .viewer{position:static}
+  .about-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .grid2{grid-template-columns:1fr}
+  .entry .row3{grid-template-columns:1fr}
+}
+
+/* ------------------------------------------------------------------ paper */
+
+.paper.sans{--doc-font:var(--sans)}
+.paper.serif{--doc-font:Georgia,"Times New Roman",Times,serif}
+.paper{font-family:var(--doc-font,var(--sans))}
+.paper *{box-sizing:border-box}
+.paper p{margin:0}
+.doc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8mm;margin-bottom:5mm}
+.doc-name{font-size:23pt;line-height:1.1;letter-spacing:-.02em;margin:0;font-weight:700}
+.doc-role{font-size:11.5pt;color:#3f4b59;margin-top:1.4mm}
+.doc-contact{font-size:9pt;color:#3f4b59;line-height:1.6;white-space:nowrap}
+.doc-contact span{display:block;text-align:right}
+.doc-photo{width:26mm;height:32mm;object-fit:cover;border-radius:2px;flex:0 0 auto}
+
+.sec{margin-top:5.2mm}
+.sec:first-of-type{margin-top:0}
+.sec-h{
+  font-size:8.6pt;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  color:#101820;border-bottom:.35mm solid #101820;padding-bottom:1mm;margin:0 0 2.6mm;
+}
+.paper.accent .sec-h{border-bottom-color:var(--acc)}
+.sec-h.acc{color:var(--acc);border-bottom-color:var(--acc)}
+
+.entry-doc{margin:0 0 3.4mm;break-inside:avoid;page-break-inside:avoid}
+.entry-doc:last-child{margin-bottom:0}
+.entry-line{display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
+.entry-role{font-weight:700;font-size:10.6pt}
+.entry-when{font-size:8.8pt;color:#5b6877;white-space:nowrap;font-variant-numeric:tabular-nums}
+.entry-sub{font-size:9.6pt;color:#3f4b59;margin-top:.4mm}
+.entry-place{font-size:9pt;color:#6b7787}
+.doc-list{margin:1.4mm 0 0;padding-left:4.6mm}
+.doc-list li{margin:0 0 .8mm;font-size:9.8pt}
+.doc-para{font-size:9.9pt}
+.chips{display:flex;flex-wrap:wrap;gap:1.6mm 2.4mm;font-size:9.6pt}
+.chips span{background:#eef1f5;border-radius:1mm;padding:.5mm 2mm}
+.paper.serif .chips span{background:#f0eee9}
+
+/* two column */
+.paper.tpl-column .doc-body{display:grid;grid-template-columns:58mm minmax(0,1fr);gap:7mm}
+.paper.tpl-column .side{background:#f3f5f8;margin:-6mm 0 -6mm -6mm;padding:6mm}
+.paper.tpl-column .side .sec-h{border-bottom-width:.3mm}
+.paper.tpl-column .doc-head{grid-column:1 / -1}
+.paper.tpl-column .side .doc-photo{width:100%;height:52mm;margin-bottom:4mm}
+.paper.tpl-column .main{min-width:0}
+
+/* banner */
+.paper.tpl-banner .band{
+  margin:calc(-1 * var(--paper-pad)) calc(-1 * var(--paper-pad)) 5mm;
+  padding:9mm var(--paper-pad) 7mm;background:var(--acc);color:#fff;
+  display:flex;align-items:center;gap:6mm;
+}
+.paper.tpl-banner .band .doc-name{color:#fff;font-size:25pt}
+.paper.tpl-banner .band .doc-role{color:rgba(255,255,255,.88)}
+.paper.tpl-banner .band .doc-contact{color:rgba(255,255,255,.9);flex:1}
+.paper.tpl-banner .band .doc-contact span{text-align:right}
+.paper.tpl-banner .band .doc-photo{width:24mm;height:29mm;border:0}
+
+.doc-empty{color:#9aa4b0;font-size:9pt;font-style:italic}
+
+/* ------------------------------------------------------------------ print */
+
+@media print{
+  @page{}
+  html,body{background:#fff !important}
+  .topbar,.editor,.about,.foot,.viewer-bar,.print-hint,.skip{display:none !important}
+  .layout{display:block;padding:0;margin:0;max-width:none;width:auto}
+  .wrap{max-width:none;padding:0;margin:0}
+  .viewer{position:static}
+  .stage{transform:none !important;width:auto;height:auto !important;overflow:visible;border:0;border-radius:0;background:none}
+  .paper{
+    transform:none !important;box-shadow:none;margin:0;border:0;
+    width:var(--paper-w);min-height:0;
+  }
+  .paper + .paper{page-break-before:always}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+<style id="pageCss">@page{size:A4;margin:0}</style>
+<script>
+/* Paint the stored theme before the body exists, so a reload never flashes. */
+(function () {
+  try {
+    var saved = localStorage.getItem('cv-builder.theme');
+    var dark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+}());
+</script>
+</head>
+<body>
+
+<a class="skip" href="#editor" data-i18n="skip">Skip to the form</a>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#editor">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="22" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11.5 11h9M11.5 15.5h9M11.5 20h5.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+      <span class="brand-text">CV<span class="brand-dot">.</span>Builder</span>
+    </a>
+    <div class="tools">
+      <label class="sr" for="lang" data-i18n="uiLanguage">Interface language</label>
+      <select id="lang" class="select"></select>
+      <button id="theme" class="iconbtn" type="button" data-i18n-aria-label="theme" aria-label="Switch theme">
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+
+  <section class="editor" id="editor" aria-label="Editor">
+    <div class="panel intro-panel">
+      <h1 data-i18n="h1">A CV that prints, without the paywall</h1>
+      <p class="lede" data-i18n="lede">Fill the form, watch the page, print it as PDF. No account, no watermark, and the file is yours: the words never leave this tab.</p>
+      <div class="actions">
+        <button id="btn-sample" class="btn small" type="button" data-i18n="loadSample">Fill with an example</button>
+        <span class="hint" style="margin:0;align-self:center" data-i18n="sampleNote">The example is invented and safe to replace.</span>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2 data-i18n="whoTitle">Who you are</h2>
+      <div class="grid2">
+        <label class="field"><span data-i18n="fullName">Full name</span><input id="p-name" type="text" autocomplete="name" placeholder="Ana Petrović"></label>
+        <label class="field"><span data-i18n="role">The job you want</span><input id="p-title" type="text" placeholder="Product designer"></label>
+        <label class="field"><span data-i18n="email">Email</span><input id="p-email" type="email" autocomplete="email" placeholder="ana@example.com"></label>
+        <label class="field"><span data-i18n="phone">Phone</span><input id="p-phone" type="tel" autocomplete="tel" placeholder="+381 60 123 4567"></label>
+        <label class="field"><span data-i18n="city">City</span><input id="p-city" type="text" placeholder="Vršac, Serbia"></label>
+        <label class="field"><span data-i18n="web">Link</span><input id="p-web" type="text" placeholder="linkedin.com/in/ana"></label>
+      </div>
+      <div class="photo-row">
+        <label class="field"><span data-i18n="photo">Photo, optional</span><input id="p-photo" type="file" accept="image/*"></label>
+        <button id="p-photo-clear" class="btn ghost" type="button" data-i18n="photoClear">Remove photo</button>
+      </div>
+      <p class="hint" data-i18n="photoHint">A photo is normal in Serbia and most of the Balkans, and unwanted in Britain and the United States. The two column and banner layouts show it, the classic one does not.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="summaryTitle">In one paragraph</h2>
+      <label class="field"><span data-i18n="summaryLabel">What you do and what you are good at</span>
+        <textarea id="p-summary" rows="4" placeholder="Product designer with six years in e-commerce, focused on checkout flows and design systems."></textarea>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="expTitle">Experience</h2>
+        <button class="btn small" type="button" id="add-exp" data-i18n="addJob">Add a job</button>
+      </div>
+      <div id="exp-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="eduTitle">Education</h2>
+        <button class="btn small" type="button" id="add-edu" data-i18n="addEdu">Add a school</button>
+      </div>
+      <div id="edu-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="skillsTitle">Skills</h2>
+      <label class="field"><span data-i18n="skillsLabel">Separated by commas</span>
+        <input id="p-skills" type="text" placeholder="Figma, design systems, HTML, CSS">
+      </label>
+      <div class="panel-head tight">
+        <h2 data-i18n="langTitle">Languages</h2>
+        <button class="btn small" type="button" id="add-lang" data-i18n="addLang">Add a language</button>
+      </div>
+      <div id="lang-list" class="entries"></div>
+      <div class="panel-head tight">
+        <h2 data-i18n="certTitle">Certificates</h2>
+        <button class="btn small" type="button" id="add-cert" data-i18n="addCert">Add a certificate</button>
+      </div>
+      <div id="cert-list" class="entries"></div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n="lookTitle">How it looks</h2>
+      <div class="grid2">
+        <label class="field"><span data-i18n="template">Layout</span>
+          <select id="o-template">
+            <option value="classic" data-i18n="tplClassic">Classic, safest for robots</option>
+            <option value="column" data-i18n="tplColumn">Two columns</option>
+            <option value="banner" data-i18n="tplBanner">Banner across the top</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="docLang">Language of the CV</span>
+          <select id="o-doclang">
+            <option value="en">English</option>
+            <option value="ro">Română</option>
+            <option value="sr-latn">Srpski</option>
+            <option value="sr-cyrl">Српски</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="paper">Paper</span>
+          <select id="o-page">
+            <option value="a4">A4, 210 × 297 mm</option>
+            <option value="letter">US Letter, 8.5 × 11 in</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="typeface">Typeface</span>
+          <select id="o-font">
+            <option value="sans" data-i18n="fontSans">Sans, modern</option>
+            <option value="serif" data-i18n="fontSerif">Serif, formal</option>
+          </select>
+        </label>
+      </div>
+      <div class="swatches" role="group" aria-label="Accent">
+        <button class="swatch on" type="button" data-accent="#2f5d8a" style="--c:#2f5d8a" aria-label="Steel blue"></button>
+        <button class="swatch" type="button" data-accent="#1f6f5c" style="--c:#1f6f5c" aria-label="Green"></button>
+        <button class="swatch" type="button" data-accent="#8a3b2f" style="--c:#8a3b2f" aria-label="Brick"></button>
+        <button class="swatch" type="button" data-accent="#3b3b3b" style="--c:#3b3b3b" aria-label="Graphite"></button>
+      </div>
+    </section>
+
+    <section class="panel data-panel">
+      <h2 data-i18n="dataTitle">Your file</h2>
+      <p class="hint" data-i18n="dataHint">The CV is saved in this browser as you type. Export a copy to keep it, or to move it to another computer.</p>
+      <div class="actions">
+        <button id="btn-json" class="btn" type="button" data-i18n="exportJson">Export a copy</button>
+        <label class="btn file-btn"><span data-i18n="importJson">Open a copy</span><input id="import-json" type="file" accept="application/json"></label>
+        <button id="btn-clear" class="btn ghost" type="button" data-i18n="clearAll">Start from blank</button>
+      </div>
+    </section>
+  </section>
+
+  <section class="viewer" aria-label="Preview">
+    <div class="viewer-bar">
+      <span class="pages" id="pages" aria-live="polite"></span>
+      <button id="btn-print" class="btn primary" type="button" data-i18n="printIt">Print or save as PDF</button>
+    </div>
+    <p class="hint print-hint" data-i18n="printHint">In the print dialog pick "Save as PDF", paper A4 or Letter, margins none, and keep the scale at 100 percent.</p>
+    <div class="stage" id="stage">
+      <article class="paper" id="paper"></article>
+    </div>
+  </section>
+</main>
+
+<section class="about wrap">
+  <h2 data-i18n="aboutTitle">Why it is free all the way to the download</h2>
+  <div class="about-grid">
+    <div>
+      <h3 data-i18n="about1Title">No paywall at the end</h3>
+      <p data-i18n="about1Body">The category has one loud complaint: build the CV for free, then find the PDF behind a card. Here the print button is the whole product, and it costs nothing.</p>
+    </div>
+    <div>
+      <h3 data-i18n="about2Title">No watermark, no account</h3>
+      <p data-i18n="about2Body">Nothing is stamped on your page, nothing is asked for your address, and no email is collected. There is no backend to collect it.</p>
+    </div>
+    <div>
+      <h3 data-i18n="about3Title">Text, not a picture</h3>
+      <p data-i18n="about3Body">The classic layout is one column of real text with real headings, so the machine that reads applications can read it too.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <p><span data-i18n="footerFree">Every tool here is free and stays free.</span> <a href="https://freehtml.dev">freehtml.dev</a> · <a href="https://github.com/TekiDeki/CV-Builder">GitHub</a></p>
+  </div>
+</footer>
+
+<script>
+/* CV Builder - TekiDeki
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The parts that can be tested without a browser: month names, date ranges,
+ * turning a block of text into bullets, and the shape of a blank CV. No DOM,
+ * no storage, no page.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.CVModel = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  /* Short months, the way a CV writes them. Serbian and Romanian use a dot
+     after the abbreviation because that is how they are written at home. */
+  var MONTHS = {
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    ro: ['ian.', 'feb.', 'mar.', 'apr.', 'mai', 'iun.', 'iul.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.'],
+    'sr-latn': ['jan.', 'feb.', 'mar.', 'apr.', 'maj', 'jun', 'jul', 'avg.', 'sep.', 'okt.', 'nov.', 'dec.'],
+    'sr-cyrl': ['јан.', 'феб.', 'мар.', 'апр.', 'мај', 'јун', 'јул', 'авг.', 'сеп.', 'окт.', 'нов.', 'дец.']
+  };
+
+  /* The year goes before the month, which is the British and Balkan habit,
+     and the only order that needs no comma. */
+  function fmtMonth(value, lang) {
+    if (!value) return '';
+    var match = /^(\d{4})-(\d{2})$/.exec(String(value).trim());
+    if (!match) return String(value);
+    var table = MONTHS[lang] || MONTHS.en;
+    var month = table[+match[2] - 1];
+    if (!month) return match[1];
+    return month + ' ' + match[1];
+  }
+
+  /* A range with a plain hyphen. An en dash would look nicer and is banned
+     by the build, so the hyphen is the house style everywhere. */
+  function range(from, to, present, lang, presentWord) {
+    var start = fmtMonth(from, lang);
+    var end = present ? (presentWord || 'Present') : fmtMonth(to, lang);
+    if (start && end) return start + ' - ' + end;
+    return start || end || '';
+  }
+
+  /* One bullet per line, leading dashes and bullets removed, empty lines
+     dropped. People paste lists from everywhere. */
+  function bullets(text) {
+    return String(text || '')
+      .split('\n')
+      .map(function (line) { return line.replace(/^\s*(?:[-*•·]|\d+[.)])\s*/, '').trim(); })
+      .filter(function (line) { return line.length > 0; });
+  }
+
+  function skills(text) {
+    return String(text || '')
+      .split(',')
+      .map(function (item) { return item.trim(); })
+      .filter(function (item) { return item.length > 0; });
+  }
+
+  function blank() {
+    return {
+      person: { name: '', title: '', email: '', phone: '', city: '', web: '', summary: '', photo: '' },
+      experience: [],
+      education: [],
+      skills: '',
+      languages: [],
+      certs: [],
+      options: { template: 'classic', doclang: 'en', page: 'a4', font: 'sans', accent: '#2f5d8a' }
+    };
+  }
+
+  /* A demo is worth more than an empty page, but it has to be obviously a
+     demo: nothing here belongs to a real person. */
+  function sample() {
+    return {
+      person: {
+        name: 'Ana Petrović',
+        title: 'Product designer',
+        email: 'ana@example.com',
+        phone: '+381 60 123 4567',
+        city: 'Vršac, Serbia',
+        web: 'linkedin.com/in/ana',
+        summary: 'Product designer with six years in e-commerce, mostly on checkout and account flows. I work close to engineering, write the copy that ships with the screen, and leave a design system behind instead of a folder of mockups.',
+        photo: ''
+      },
+      experience: [
+        {
+          role: 'Senior product designer',
+          company: 'Riverside Commerce',
+          place: 'Belgrade',
+          from: '2022-03',
+          to: '',
+          present: true,
+          text: 'Rebuilt the checkout from three steps to one, which lifted completed orders by 11 percent.\nStarted a component library now used by four product teams.\nRan the first usability sessions with older customers, which rewrote the whole payment screen.'
+        },
+        {
+          role: 'Product designer',
+          company: 'Studio Korak',
+          place: 'Novi Sad',
+          from: '2019-06',
+          to: '2022-02',
+          present: false,
+          text: 'Designed the booking flow for a dental chain, from paper forms to a phone app.\nWrote the design briefs that clients signed, which ended most of the redraws.'
+        }
+      ],
+      education: [
+        { school: 'University of Novi Sad', degree: 'BA, Graphic design', place: 'Novi Sad', from: '2015-10', to: '2019-06', note: '' }
+      ],
+      skills: 'Figma, design systems, prototyping, HTML and CSS, copywriting, usability testing',
+      languages: [
+        { name: 'Serbian', level: 'native' },
+        { name: 'English', level: 'fluent' },
+        { name: 'German', level: 'good' }
+      ],
+      certs: [{ name: 'Google UX Design', year: '2021' }],
+      options: { template: 'classic', doclang: 'en', page: 'a4', font: 'sans', accent: '#2f5d8a' }
+    };
+  }
+
+  /* Anything read from a file or from storage goes through here, so a broken
+     or older copy cannot crash the page. */
+  function normalize(raw) {
+    var base = blank();
+    if (!raw || typeof raw !== 'object') return base;
+    var person = raw.person && typeof raw.person === 'object' ? raw.person : {};
+    Object.keys(base.person).forEach(function (key) {
+      var value = person[key];
+      base.person[key] = (typeof value === 'string' || typeof value === 'number') ? String(value) : '';
+    });
+    base.experience = Array.isArray(raw.experience) ? raw.experience.map(function (item) {
+      return {
+        role: String(item && item.role || ''),
+        company: String(item && item.company || ''),
+        place: String(item && item.place || ''),
+        from: String(item && item.from || ''),
+        to: String(item && item.to || ''),
+        present: !!(item && item.present),
+        text: String(item && item.text || '')
+      };
+    }) : [];
+    base.education = Array.isArray(raw.education) ? raw.education.map(function (item) {
+      return {
+        school: String(item && item.school || ''),
+        degree: String(item && item.degree || ''),
+        place: String(item && item.place || ''),
+        from: String(item && item.from || ''),
+        to: String(item && item.to || ''),
+        note: String(item && item.note || '')
+      };
+    }) : [];
+    base.skills = typeof raw.skills === 'string' ? raw.skills : '';
+    base.languages = Array.isArray(raw.languages) ? raw.languages.map(function (item) {
+      return { name: String(item && item.name || ''), level: String(item && item.level || 'good') };
+    }) : [];
+    base.certs = Array.isArray(raw.certs) ? raw.certs.map(function (item) {
+      return { name: String(item && item.name || ''), year: String(item && item.year || '') };
+    }) : [];
+    var options = raw.options && typeof raw.options === 'object' ? raw.options : {};
+    var allowed = { template: ['classic', 'column', 'banner'], doclang: ['en', 'ro', 'sr-latn', 'sr-cyrl'],
+                    page: ['a4', 'letter'], font: ['sans', 'serif'] };
+    Object.keys(allowed).forEach(function (key) {
+      base.options[key] = allowed[key].indexOf(options[key]) >= 0 ? options[key] : base.options[key];
+    });
+    base.options.accent = /^#[0-9a-f]{6}$/i.test(options.accent || '') ? options.accent : base.options.accent;
+    return base;
+  }
+
+  return {
+    MONTHS: MONTHS,
+    fmtMonth: fmtMonth,
+    range: range,
+    bullets: bullets,
+    skills: skills,
+    blank: blank,
+    sample: sample,
+    normalize: normalize
+  };
+}));
+</script>
+<script>
+/* Generated by build.py. Do not edit. */
+window.TD_LOCALES = {
+  "en": {"about1Body": "The category has one loud complaint: build the CV for free, then find the PDF behind a card. Here the print button is the whole product, and it costs nothing.", "about1Title": "No paywall at the end", "about2Body": "Nothing is stamped on your page, nothing is asked for your address, and no email is collected. There is no backend to collect it.", "about2Title": "No watermark, no account", "about3Body": "The classic layout is one column of real text with real headings, so the machine that reads applications can read it too.", "about3Title": "Text, not a picture", "aboutTitle": "Why it is free all the way to the download", "addCert": "Add a certificate", "addEdu": "Add a school", "addJob": "Add a job", "addLang": "Add a language", "bulletsLabel": "What you did, one line each", "certN": "Certificate {n}", "certTitle": "Certificates", "city": "City", "clearAll": "Start from blank", "cleared": "Blank page.", "companyLabel": "Company", "confirmClear": "Start from blank and lose what is typed here?", "contactLabel": "Contact", "dataHint": "The CV is saved in this browser as you type. Export a copy to keep it, or to move it to another computer.", "dataTitle": "Your file", "degreeLabel": "Degree", "docLang": "Language of the CV", "eduTitle": "Education", "email": "Email", "emptyDoc": "Your name appears here.", "expTitle": "Experience", "exportJson": "Export a copy", "fontSans": "Sans, modern", "fontSerif": "Serif, formal", "footerFree": "Every tool here is free and stays free.", "fromLabel": "From", "fullName": "Full name", "h1": "A CV that prints, without the paywall", "importBad": "That file is not a CV backup.", "importJson": "Open a copy", "jobN": "Job {n}", "langTitle": "Languages", "languageN": "Language {n}", "lede": "Fill the form, watch the page, print it as PDF. No account, no watermark, and the file is yours: the words never leave this tab.", "levelLabel": "Level", "loadSample": "Fill with an example", "lookTitle": "How it looks", "nameLabel": "Name", "noteLabel": "Note, optional", "pagesMany": "{n} pages", "pagesOne": "1 page", "paper": "Paper", "phone": "Phone", "photo": "Photo, optional", "photoBig": "That picture is too large. Try a smaller one.", "photoClear": "Remove photo", "photoHint": "A photo is normal in Serbia and most of the Balkans, and unwanted in Britain and the United States. The two column and banner layouts show it, the classic one does not.", "placeLabel": "City", "present": "Still here", "printHint": "In the print dialog pick Save as PDF, paper A4 or Letter, margins none, and keep the scale at 100 percent.", "printIt": "Print or save as PDF", "printed": "Use the print dialog to save the PDF.", "remove": "Remove", "role": "The job you want", "roleLabel": "Role", "sampleNote": "The example is invented and safe to replace.", "schoolLabel": "School", "schoolN": "School {n}", "skillsLabel": "Separated by commas", "skillsTitle": "Skills", "skip": "Skip to the form", "summaryLabel": "What you do and what you are good at", "summaryTitle": "In one paragraph", "template": "Layout", "theme": "Switch theme", "toLabel": "To", "tplBanner": "Banner across the top", "tplClassic": "Classic, safest for robots", "tplColumn": "Two columns", "typeface": "Typeface", "uiLanguage": "Interface language", "web": "Link", "whoTitle": "Who you are", "yearLabel": "Year"},
+  "ro": {"about1Body": "Categoria are o singură mare nemulțumire: construiești CV-ul gratis, apoi descoperi că PDF-ul stă după card. Aici butonul de tipărire este tot produsul, și nu costă nimic.", "about1Title": "Fără plată la final", "about2Body": "Nu se ștampilează nimic pe pagină, nu ți se cere adresa și nu se strânge niciun email. Nu există server care să le strângă.", "about2Title": "Fără watermark, fără cont", "about3Body": "Macheta clasică este o singură coloană de text adevărat, cu titluri adevărate, deci o poate citi și programul care sortează aplicațiile.", "about3Title": "Text, nu poză", "aboutTitle": "De ce e gratis până la descărcare", "addCert": "Adaugă un certificat", "addEdu": "Adaugă o școală", "addJob": "Adaugă un loc de muncă", "addLang": "Adaugă o limbă", "bulletsLabel": "Ce ai făcut, o linie pentru fiecare", "certN": "Certificatul {n}", "certTitle": "Certificate", "city": "Oraș", "clearAll": "Începe de la pagină goală", "cleared": "Pagină goală.", "companyLabel": "Firmă", "confirmClear": "Începi de la pagină goală și pierzi ce ai scris?", "contactLabel": "Contact", "dataHint": "CV-ul se salvează în acest browser pe măsură ce scrii. Exportă o copie ca să o păstrezi sau ca să o muți pe alt calculator.", "dataTitle": "Fișierul tău", "degreeLabel": "Diplomă", "docLang": "Limba CV-ului", "eduTitle": "Educație", "email": "Email", "emptyDoc": "Numele tău apare aici.", "expTitle": "Experiență", "exportJson": "Exportă o copie", "fontSans": "Fără serife, modern", "fontSerif": "Cu serife, formal", "footerFree": "Fiecare unealtă de aici este gratis și rămâne gratis.", "fromLabel": "De la", "fullName": "Nume complet", "h1": "Un CV care se tipărește, fără plată la final", "importBad": "Fișierul acesta nu este o copie de CV.", "importJson": "Deschide o copie", "jobN": "Locul {n}", "langTitle": "Limbi", "languageN": "Limba {n}", "lede": "Completezi formularul, vezi pagina, o tipărești ca PDF. Fără cont, fără watermark, iar fișierul e al tău: textul nu pleacă din acest tab.", "levelLabel": "Nivel", "loadSample": "Umple cu un exemplu", "lookTitle": "Cum arată", "nameLabel": "Nume", "noteLabel": "Notă, opțional", "pagesMany": "{n} pagini", "pagesOne": "1 pagină", "paper": "Hârtie", "phone": "Telefon", "photo": "Fotografie, opțional", "photoBig": "Poza este prea mare. Încearcă una mai mică.", "photoClear": "Scoate fotografia", "photoHint": "Fotografia e normală în Serbia și în aproape tot Balcanul, și nedorită în Marea Britanie și în Statele Unite. Machetele cu două coloane și cu bandă o arată, cea clasică nu.", "placeLabel": "Oraș", "present": "Încă aici", "printHint": "În fereastra de tipărire alege Salvează ca PDF, hârtie A4 sau Letter, margini fără, și lasă scara la 100 la sută.", "printIt": "Tipărește sau salvează ca PDF", "printed": "Folosește fereastra de tipărire ca să salvezi PDF-ul.", "remove": "Scoate", "role": "Postul pe care îl vrei", "roleLabel": "Funcție", "sampleNote": "Exemplul este inventat și se poate înlocui.", "schoolLabel": "Școală", "schoolN": "Școala {n}", "skillsLabel": "Sepărate prin virgule", "skillsTitle": "Competențe", "skip": "Sari la formular", "summaryLabel": "Ce faci și la ce ești bun", "summaryTitle": "Într-un paragraf", "template": "Machetă", "theme": "Schimbă tema", "toLabel": "Până la", "tplBanner": "Bandă sus, pe toată lățimea", "tplClassic": "Clasică, cea mai sigură pentru roboți", "tplColumn": "Două coloane", "typeface": "Font", "uiLanguage": "Limba interfeței", "web": "Link", "whoTitle": "Cine ești", "yearLabel": "An"},
+  "sr-latn": {"about1Body": "Kategorija ima jednu glasnu zamerku: napraviš CV besplatno, a onda vidiš da PDF stoji iza kartice. Ovde je dugme za štampu ceo proizvod, i ne košta ništa.", "about1Title": "Bez plaćanja na kraju", "about2Body": "Ništa se ne utiskuje na stranu, ne traži se adresa i ne skuplja se email. Nema servera koji bi ih skupio.", "about2Title": "Bez vodenog žiga, bez naloga", "about3Body": "Klasičan šablon je jedna kolona pravog teksta sa pravim naslovima, pa ga može pročitati i program koji sortira prijave.", "about3Title": "Tekst, ne slika", "aboutTitle": "Zašto je besplatno sve do preuzimanja", "addCert": "Dodaj sertifikat", "addEdu": "Dodaj školu", "addJob": "Dodaj posao", "addLang": "Dodaj jezik", "bulletsLabel": "Šta si radio, jedna linija po stavci", "certN": "Sertifikat {n}", "certTitle": "Sertifikati", "city": "Grad", "clearAll": "Počni od prazne strane", "cleared": "Prazna strana.", "companyLabel": "Firma", "confirmClear": "Počinješ od prazne strane i gubiš ovo što je otkucano?", "contactLabel": "Kontakt", "dataHint": "CV se čuva u ovom pregledaču dok kucaš. Izvezi kopiju da je sačuvaš ili da je preneseš na drugi računar.", "dataTitle": "Tvoj fajl", "degreeLabel": "Diploma", "docLang": "Jezik CV-ja", "eduTitle": "Obrazovanje", "email": "Email", "emptyDoc": "Tvoje ime se pojavljuje ovde.", "expTitle": "Iskustvo", "exportJson": "Izvezi kopiju", "fontSans": "Bez serifa, moderan", "fontSerif": "Sa serifima, formalan", "footerFree": "Svaki alat ovde je besplatan i ostaje besplatan.", "fromLabel": "Od", "fullName": "Ime i prezime", "h1": "CV koji se štampa, bez plaćanja na kraju", "importBad": "Ovaj fajl nije kopija CV-ja.", "importJson": "Otvori kopiju", "jobN": "Posao {n}", "langTitle": "Jezici", "languageN": "Jezik {n}", "lede": "Ispuniš formular, vidiš stranu, štampaš je kao PDF. Bez naloga, bez vodenog žiga, a fajl je tvoj: tekst ne izlazi iz ovog taba.", "levelLabel": "Nivo", "loadSample": "Popuni primerom", "lookTitle": "Kako izgleda", "nameLabel": "Naziv", "noteLabel": "Napomena, opciono", "pagesMany": "{n} strane", "pagesOne": "1 strana", "paper": "Papir", "phone": "Telefon", "photo": "Fotografija, opciono", "photoBig": "Slika je prevelika. Probaj manju.", "photoClear": "Ukloni fotografiju", "photoHint": "Fotografija je uobičajena u Srbiji i na skoro celom Balkanu, a nepoželjna u Britaniji i Sjedinjenim Državama. Šabloni sa dve kolone i sa trakom je prikazuju, klasični ne.", "placeLabel": "Grad", "present": "Još tu", "printHint": "U prozoru za štampu izaberi Sačuvaj kao PDF, papir A4 ili Letter, bez margina, i ostavi razmeru na 100 posto.", "printIt": "Štampaj ili sačuvaj kao PDF", "printed": "Koristi prozor za štampu da sačuvaš PDF.", "remove": "Ukloni", "role": "Posao koji želiš", "roleLabel": "Pozicija", "sampleNote": "Primer je izmišljen i može se zameniti.", "schoolLabel": "Škola", "schoolN": "Škola {n}", "skillsLabel": "Odvojene zarezom", "skillsTitle": "Veštine", "skip": "Pređi na formular", "summaryLabel": "Šta radiš i u čemu si dobar", "summaryTitle": "U jednom pasusu", "template": "Šablon", "theme": "Promeni temu", "toLabel": "Do", "tplBanner": "Traka preko vrha", "tplClassic": "Klasičan, najsigurniji za robote", "tplColumn": "Dve kolone", "typeface": "Font", "uiLanguage": "Jezik interfejsa", "web": "Link", "whoTitle": "Ko si ti", "yearLabel": "Godina"},
+  "sr-cyrl": {"about1Body": "Категорија има једну гласну замерку: направиш CV бесплатно, а онда видиш да PDF стоји иза картице. Овде је дугме за штампу цео производ, и не кошта ништа.", "about1Title": "Без плаћања на крају", "about2Body": "Ништа се не утискује на страну, не тражи се адреса и не скупља се емаил. Нема сервера који би их скупио.", "about2Title": "Без воденог жига, без налога", "about3Body": "Класичан шаблон је једна колона правог текста са правим насловима, па га може прочитати и програм који сортира пријаве.", "about3Title": "Текст, не слика", "aboutTitle": "Зашто је бесплатно све до преузимања", "addCert": "Додај сертификат", "addEdu": "Додај школу", "addJob": "Додај посао", "addLang": "Додај језик", "bulletsLabel": "Шта си радио, једна линија по ставци", "certN": "Сертификат {n}", "certTitle": "Сертификати", "city": "Град", "clearAll": "Почни од празне стране", "cleared": "Празна страна.", "companyLabel": "Фирма", "confirmClear": "Почињеш од празне стране и губиш ово што је откуцано?", "contactLabel": "Контакт", "dataHint": "CV се чува у овом прегледачу док куцаш. Извези копију да је сачуваш или да је пренесеш на други рачунар.", "dataTitle": "Твој фајл", "degreeLabel": "Диплома", "docLang": "Језик CV-ја", "eduTitle": "Образовање", "email": "Email", "emptyDoc": "Твоје име се појављује овде.", "expTitle": "Искуство", "exportJson": "Извези копију", "fontSans": "Без серифа, модеран", "fontSerif": "Са серифима, формалан", "footerFree": "Сваки алат овде је бесплатан и остаје бесплатан.", "fromLabel": "Од", "fullName": "Име и презиме", "h1": "CV који се штампа, без плаћања на крају", "importBad": "Овај фајл није копија CV-ја.", "importJson": "Отвори копију", "jobN": "Посао {n}", "langTitle": "Језици", "languageN": "Језик {n}", "lede": "Испуниш формулар, видиш страну, штампаш је као PDF. Без налога, без воденог жига, а фајл је твој: текст не излази из овог таба.", "levelLabel": "Ниво", "loadSample": "Попуни примером", "lookTitle": "Како изгледа", "nameLabel": "Назив", "noteLabel": "Напомена, опционо", "pagesMany": "{n} стране", "pagesOne": "1 страна", "paper": "Папир", "phone": "Телефон", "photo": "Фотографија, опционо", "photoBig": "Слика је превелика. Пробај мању.", "photoClear": "Уклони фотографију", "photoHint": "Фотографија је уобичајена у Србији и на скоро целом Балкану, а непожељна у Британији и Сједињеним Државама. Шаблони са две колоне и са траком је приказују, класични не.", "placeLabel": "Град", "present": "Још ту", "printHint": "У прозору за штампу изабери Сачувај као PDF, папир A4 или Letter, без маргина, и остави размеру на 100 посто.", "printIt": "Штампај или сачувај као PDF", "printed": "Користи прозор за штампу да сачуваш PDF.", "remove": "Уклони", "role": "Посао који желиш", "roleLabel": "Позиција", "sampleNote": "Пример је измишљен и може се заменити.", "schoolLabel": "Школа", "schoolN": "Школа {n}", "skillsLabel": "Одвојене зарезом", "skillsTitle": "Вештине", "skip": "Пређи на формулар", "summaryLabel": "Шта радиш и у чему си добар", "summaryTitle": "У једном пасусу", "template": "Шаблон", "theme": "Промени тему", "toLabel": "До", "tplBanner": "Трака преко врха", "tplClassic": "Класичан, најсигурнији за роботе", "tplColumn": "Две колоне", "typeface": "Фонт", "uiLanguage": "Језик интерфејса", "web": "Link", "whoTitle": "Ко си ти", "yearLabel": "Година"}
+};
+
+/* Generated by build.py. Do not edit. */
+window.TD_DOC = {
+  "en": {"basic": "Basic", "certifications": "Certificates", "education": "Education", "experience": "Experience", "fluent": "Fluent", "good": "Good", "languages": "Languages", "native": "Native", "present": "Present", "skills": "Skills", "summary": "Profile"},
+  "ro": {"basic": "De bază", "certifications": "Certificate", "education": "Educație", "experience": "Experiență", "fluent": "Fluente", "good": "Bune", "languages": "Limbi", "native": "Nativ", "present": "Prezent", "skills": "Competențe", "summary": "Profil"},
+  "sr-latn": {"basic": "Osnovno", "certifications": "Sertifikati", "education": "Obrazovanje", "experience": "Iskustvo", "fluent": "Tečno", "good": "Dobro", "languages": "Jezici", "native": "Maternji", "present": "Danas", "skills": "Veštine", "summary": "Profil"},
+  "sr-cyrl": {"basic": "Основно", "certifications": "Сертификати", "education": "Образовање", "experience": "Искуство", "fluent": "Течно", "good": "Добро", "languages": "Језици", "native": "Матерњи", "present": "Данас", "skills": "Вештине", "summary": "Профил"}
+};
+</script>
+<script>
+/* CV Builder - TekiDeki
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The editor: reads the form, keeps one object in localStorage, and draws that
+ * object as the page you are about to print. The page is the only truth: the
+ * preview, the print and the saved copy all come from the same object.
+ */
+(function () {
+  'use strict';
+
+  var M = window.CVModel;
+  var LOCALES = window.TD_LOCALES || { en: {} };
+  var DOC = window.TD_DOC || { en: {} };
+  var STORE = 'cv-builder.data';
+  var lang = 'en';
+
+  /* ------------------------------------------------------------- language */
+
+  function t(key, vars) {
+    var table = LOCALES[lang] || LOCALES.en || {};
+    var value = table[key] || (LOCALES.en || {})[key] || key;
+    if (vars) {
+      Object.keys(vars).forEach(function (name) {
+        value = value.replace('{' + name + '}', String(vars[name]));
+      });
+    }
+    return value;
+  }
+
+  function docT(key) {
+    var table = DOC[state.options.doclang] || DOC.en || {};
+    return table[key] || (DOC.en || {})[key] || key;
+  }
+
+  /* ---------------------------------------------------------------- state */
+
+  function readStore() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      return raw ? M.normalize(JSON.parse(raw)) : M.blank();
+    } catch (error) {
+      return M.blank();
+    }
+  }
+
+  var state = readStore();
+  var paper = document.getElementById('paper');
+  var stage = document.getElementById('stage');
+  var pagesEl = document.getElementById('pages');
+
+  function persist() {
+    try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (error) { /* full or private */ }
+  }
+
+  /* --------------------------------------------------------------- escape */
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ---------------------------------------------------------------- paper */
+
+  function contactLines() {
+    var p = state.person;
+    return [p.email, p.phone, p.city, p.web]
+      .filter(function (line) { return line.trim(); })
+      .map(function (line) { return '<span>' + esc(line) + '</span>'; })
+      .join('');
+  }
+
+  function headBlock() {
+    var p = state.person;
+    var name = p.name.trim() || t('emptyDoc');
+    return '<div class="doc-head"><div>' +
+      '<h1 class="doc-name">' + esc(name) + '</h1>' +
+      (p.title.trim() ? '<p class="doc-role">' + esc(p.title) + '</p>' : '') +
+      '</div>' + (contactLines() ? '<div class="doc-contact">' + contactLines() + '</div>' : '') +
+      '</div>';
+  }
+
+  function summaryBlock() {
+    var text = state.person.summary.trim();
+    if (!text) return '';
+    return section(docT('summary'), '<p class="doc-para">' + esc(text).replace(/\n/g, '<br>') + '</p>');
+  }
+
+  function section(title, body, extra) {
+    if (!body) return '';
+    return '<section class="sec"><h2 class="sec-h' + (extra || '') + '">' + esc(title) + '</h2>' + body + '</section>';
+  }
+
+  function experienceBlock() {
+    var rows = state.experience.filter(function (item) {
+      return item.role.trim() || item.company.trim() || item.text.trim();
+    }).map(function (item) {
+      var when = M.range(item.from, item.to, item.present, state.options.doclang, docT('present'));
+      var sub = [item.company, item.place].filter(function (part) { return part.trim(); }).join(', ');
+      var list = M.bullets(item.text);
+      return '<div class="entry-doc">' +
+        '<div class="entry-line"><span class="entry-role">' + esc(item.role) + '</span>' +
+        (when ? '<span class="entry-when">' + esc(when) + '</span>' : '') + '</div>' +
+        (sub ? '<div class="entry-sub">' + esc(sub) + '</div>' : '') +
+        (list.length ? '<ul class="doc-list">' + list.map(function (line) {
+          return '<li>' + esc(line) + '</li>';
+        }).join('') + '</ul>' : '') +
+        '</div>';
+    }).join('');
+    return section(docT('experience'), rows);
+  }
+
+  function educationBlock() {
+    var rows = state.education.filter(function (item) {
+      return item.school.trim() || item.degree.trim();
+    }).map(function (item) {
+      var when = M.range(item.from, item.to, false, state.options.doclang);
+      var sub = [item.degree, item.place].filter(function (part) { return part.trim(); }).join(', ');
+      return '<div class="entry-doc">' +
+        '<div class="entry-line"><span class="entry-role">' + esc(item.school) + '</span>' +
+        (when ? '<span class="entry-when">' + esc(when) + '</span>' : '') + '</div>' +
+        (sub ? '<div class="entry-sub">' + esc(sub) + '</div>' : '') +
+        (item.note.trim() ? '<div class="entry-place">' + esc(item.note) + '</div>' : '') +
+        '</div>';
+    }).join('');
+    return section(docT('education'), rows);
+  }
+
+  function skillsBlock() {
+    var items = M.skills(state.skills);
+    if (!items.length) return '';
+    return section(docT('skills'), '<div class="chips">' + items.map(function (item) {
+      return '<span>' + esc(item) + '</span>';
+    }).join('') + '</div>');
+  }
+
+  function languagesBlock() {
+    var items = state.languages.filter(function (item) { return item.name.trim(); });
+    if (!items.length) return '';
+    return section(docT('languages'), '<ul class="doc-list" style="padding-left:0;list-style:none">' + items.map(function (item) {
+      return '<li>' + esc(item.name) + ' <span style="color:#5b6877">(' + esc(docT(item.level)) + ')</span></li>';
+    }).join('') + '</ul>');
+  }
+
+  function certsBlock() {
+    var items = state.certs.filter(function (item) { return item.name.trim(); });
+    if (!items.length) return '';
+    return section(docT('certifications'), '<ul class="doc-list" style="padding-left:0;list-style:none">' + items.map(function (item) {
+      return '<li>' + esc(item.name) + (item.year.trim() ? ', ' + esc(item.year) : '') + '</li>';
+    }).join('') + '</ul>');
+  }
+
+  function photoTag(className) {
+    if (!state.person.photo) return '';
+    return '<img class="doc-photo ' + (className || '') + '" src="' + state.person.photo + '" alt="">';
+  }
+
+  function renderPaper() {
+    var options = state.options;
+    paper.className = 'paper tpl-' + options.template + ' ' + options.font;
+    paper.style.setProperty('--acc', options.accent);
+
+    var html;
+    if (options.template === 'column') {
+      html = '<div class="doc-body">' +
+        '<header class="doc-head"><div>' +
+        '<h1 class="doc-name">' + esc(state.person.name.trim() || t('emptyDoc')) + '</h1>' +
+        (state.person.title.trim() ? '<p class="doc-role">' + esc(state.person.title) + '</p>' : '') +
+        '</div></header>' +
+        '<aside class="side">' +
+        photoTag() +
+        (contactLines() ? '<section class="sec"><h2 class="sec-h acc">' + esc(t('contactLabel')) + '</h2><div class="entry-place">' + contactLines().replace(/<span>/g, '<span style="display:block">') + '</div></section>' : '') +
+        skillsBlock() + languagesBlock() + certsBlock() +
+        '</aside>' +
+        '<div class="main">' + summaryBlock() + experienceBlock() + educationBlock() + '</div>' +
+        '</div>';
+    } else if (options.template === 'banner') {
+      html = '<div class="band">' + photoTag() +
+        '<div style="flex:1"><h1 class="doc-name">' + esc(state.person.name.trim() || t('emptyDoc')) + '</h1>' +
+        (state.person.title.trim() ? '<p class="doc-role">' + esc(state.person.title) + '</p>' : '') + '</div>' +
+        (contactLines() ? '<div class="doc-contact">' + contactLines() + '</div>' : '') +
+        '</div>' + summaryBlock() + experienceBlock() + educationBlock() +
+        skillsBlock() + languagesBlock() + certsBlock();
+    } else {
+      html = headBlock() + summaryBlock() + experienceBlock() + educationBlock() +
+        skillsBlock() + languagesBlock() + certsBlock();
+    }
+
+    paper.innerHTML = html;
+    document.getElementById('p-photo-clear').disabled = !state.person.photo;
+    updatePages();
+    fit();
+  }
+
+  function pageHeightPx() {
+    var mm = state.options.page === 'letter' ? 279 : 297;
+    return Math.round(mm * 96 / 25.4);
+  }
+
+  function updatePages() {
+    var ratio = paper.scrollHeight / pageHeightPx();
+    var count = Math.max(1, Math.ceil(ratio - 0.01));
+    pagesEl.textContent = count === 1 ? t('pagesOne') : t('pagesMany', { n: count });
+  }
+
+  function fit() {
+    var width = paper.offsetWidth;
+    if (!width) return;
+    var scale = Math.min(1, (stage.clientWidth - 2) / width);
+    paper.style.transform = 'scale(' + scale + ')';
+    stage.style.height = Math.round(paper.offsetHeight * scale) + 'px';
+  }
+
+  /* -------------------------------------------------------------- editors */
+
+  function field(label, inner) {
+    return '<label class="field"><span>' + esc(label) + '</span>' + inner + '</label>';
+  }
+
+  function monthInput(index, key, value, list) {
+    return '<input type="month" data-list="' + list + '" data-index="' + index + '" data-field="' + key +
+      '" value="' + esc(value) + '">';
+  }
+
+  function textInput(index, key, value, list, placeholder) {
+    return '<input type="text" data-list="' + list + '" data-index="' + index + '" data-field="' + key +
+      '" value="' + esc(value) + '" placeholder="' + esc(placeholder || '') + '">';
+  }
+
+  function entryShell(title, index, list, body) {
+    return '<div class="entry"><div class="entry-top"><span class="entry-n">' + esc(title) +
+      '</span><button class="btn small danger" type="button" data-remove="' + list + '" data-index="' + index +
+      '">' + esc(t('remove')) + '</button></div>' + body + '</div>';
+  }
+
+  function renderExperience() {
+    document.getElementById('exp-list').innerHTML = state.experience.length
+      ? state.experience.map(function (item, index) {
+        var body = '<div class="row3">' +
+          field(t('roleLabel'), textInput(index, 'role', item.role, 'experience')) +
+          field(t('companyLabel'), textInput(index, 'company', item.company, 'experience')) +
+          field(t('placeLabel'), textInput(index, 'place', item.place, 'experience')) +
+          field(t('fromLabel'), monthInput(index, 'from', item.from, 'experience')) +
+          field(t('toLabel'), monthInput(index, 'to', item.to, 'experience')) +
+          '</div>' +
+          '<label class="checkline"><input type="checkbox" data-list="experience" data-index="' + index +
+          '" data-field="present"' + (item.present ? ' checked' : '') + '> ' + esc(t('present')) + '</label>' +
+          '<div class="row3"><label class="field wide"><span>' + esc(t('bulletsLabel')) + '</span>' +
+          '<textarea rows="3" data-list="experience" data-index="' + index + '" data-field="text">' +
+          esc(item.text) + '</textarea></label></div>';
+        return entryShell(t('jobN', { n: index + 1 }), index, 'experience', body);
+      }).join('')
+      : '<p class="hint">' + esc(t('addJob')) + '</p>';
+  }
+
+  function renderEducation() {
+    document.getElementById('edu-list').innerHTML = state.education.length
+      ? state.education.map(function (item, index) {
+        var body = '<div class="row3">' +
+          field(t('schoolLabel'), textInput(index, 'school', item.school, 'education')) +
+          field(t('degreeLabel'), textInput(index, 'degree', item.degree, 'education')) +
+          field(t('placeLabel'), textInput(index, 'place', item.place, 'education')) +
+          field(t('fromLabel'), monthInput(index, 'from', item.from, 'education')) +
+          field(t('toLabel'), monthInput(index, 'to', item.to, 'education')) +
+          '</div>' +
+          '<div class="row3"><label class="field wide"><span>' + esc(t('noteLabel')) + '</span>' +
+          '<input type="text" data-list="education" data-index="' + index + '" data-field="note" value="' +
+          esc(item.note) + '"></label></div>';
+        return entryShell(t('schoolN', { n: index + 1 }), index, 'education', body);
+      }).join('')
+      : '<p class="hint">' + esc(t('addEdu')) + '</p>';
+  }
+
+  function renderLanguages() {
+    document.getElementById('lang-list').innerHTML = state.languages.length
+      ? state.languages.map(function (item, index) {
+        var levels = ['native', 'fluent', 'good', 'basic'].map(function (level) {
+          return '<option value="' + level + '"' + (item.level === level ? ' selected' : '') + '>' +
+            esc(docT(level)) + '</option>';
+        }).join('');
+        var body = '<div class="row3">' +
+          field(t('nameLabel'), textInput(index, 'name', item.name, 'languages')) +
+          '<label class="field"><span>' + esc(t('levelLabel')) + '</span>' +
+          '<select data-list="languages" data-index="' + index + '" data-field="level">' + levels + '</select></label>' +
+          '</div>';
+        return entryShell(t('languageN', { n: index + 1 }), index, 'languages', body);
+      }).join('')
+      : '<p class="hint">' + esc(t('addLang')) + '</p>';
+  }
+
+  function renderCerts() {
+    document.getElementById('cert-list').innerHTML = state.certs.length
+      ? state.certs.map(function (item, index) {
+        var body = '<div class="row3">' +
+          field(t('certTitle'), textInput(index, 'name', item.name, 'certs')) +
+          field(t('yearLabel'), textInput(index, 'year', item.year, 'certs')) +
+          '</div>';
+        return entryShell(t('certN', { n: index + 1 }), index, 'certs', body);
+      }).join('')
+      : '<p class="hint">' + esc(t('addCert')) + '</p>';
+  }
+
+  function renderLists() {
+    renderExperience();
+    renderEducation();
+    renderLanguages();
+    renderCerts();
+  }
+
+  /* --------------------------------------------------------------- inputs */
+
+  function syncStatic() {
+    var p = state.person;
+    setValue('p-name', p.name);
+    setValue('p-title', p.title);
+    setValue('p-email', p.email);
+    setValue('p-phone', p.phone);
+    setValue('p-city', p.city);
+    setValue('p-web', p.web);
+    setValue('p-summary', p.summary);
+    setValue('p-skills', state.skills);
+    setValue('o-template', state.options.template);
+    setValue('o-doclang', state.options.doclang);
+    setValue('o-page', state.options.page);
+    setValue('o-font', state.options.font);
+    document.querySelectorAll('.swatch').forEach(function (button) {
+      button.classList.toggle('on', button.getAttribute('data-accent') === state.options.accent);
+    });
+    applyPageSize();
+  }
+
+  function setValue(id, value) {
+    var element = document.getElementById(id);
+    if (element) element.value = value;
+  }
+
+  var PERSON_FIELDS = {
+    'p-name': 'name', 'p-title': 'title', 'p-email': 'email', 'p-phone': 'phone',
+    'p-city': 'city', 'p-web': 'web', 'p-summary': 'summary'
+  };
+
+  Object.keys(PERSON_FIELDS).forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function (event) {
+      state.person[PERSON_FIELDS[id]] = event.target.value;
+      renderPaper();
+      persist();
+    });
+  });
+
+  document.getElementById('p-skills').addEventListener('input', function (event) {
+    state.skills = event.target.value;
+    renderPaper();
+    persist();
+  });
+
+  /* one listener for every generated field, so adding rows never rebinds */
+  function onGenerated(event) {
+    var target = event.target;
+    var list = target.getAttribute('data-list');
+    if (!list) return;
+    var index = +target.getAttribute('data-index');
+    var fieldName = target.getAttribute('data-field');
+    var item = state[list] && state[list][index];
+    if (!item) return;
+    item[fieldName] = target.type === 'checkbox' ? target.checked : target.value;
+    if (fieldName === 'present' && target.checked) {
+      item.to = '';
+      var toInput = document.querySelector('[data-list="' + list + '"][data-index="' + index + '"][data-field="to"]');
+      if (toInput) toInput.value = '';
+    }
+    renderPaper();
+    persist();
+  }
+
+  ['exp-list', 'edu-list', 'lang-list', 'cert-list'].forEach(function (id) {
+    var node = document.getElementById(id);
+    node.addEventListener('input', onGenerated);
+    node.addEventListener('change', onGenerated);
+    node.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-remove]');
+      if (!button) return;
+      var list = button.getAttribute('data-remove');
+      state[list].splice(+button.getAttribute('data-index'), 1);
+      renderLists();
+      renderPaper();
+      persist();
+    });
+  });
+
+  document.getElementById('add-exp').addEventListener('click', function () {
+    state.experience.push({ role: '', company: '', place: '', from: '', to: '', present: true, text: '' });
+    renderExperience(); renderPaper(); persist();
+  });
+  document.getElementById('add-edu').addEventListener('click', function () {
+    state.education.push({ school: '', degree: '', place: '', from: '', to: '', note: '' });
+    renderEducation(); renderPaper(); persist();
+  });
+  document.getElementById('add-lang').addEventListener('click', function () {
+    state.languages.push({ name: '', level: 'good' });
+    renderLanguages(); renderPaper(); persist();
+  });
+  document.getElementById('add-cert').addEventListener('click', function () {
+    state.certs.push({ name: '', year: '' });
+    renderCerts(); renderPaper(); persist();
+  });
+
+  /* -------------------------------------------------------------- options */
+
+  document.getElementById('o-template').addEventListener('change', function (event) {
+    state.options.template = event.target.value;
+    renderPaper(); persist();
+  });
+  document.getElementById('o-doclang').addEventListener('change', function (event) {
+    state.options.doclang = event.target.value;
+    renderLanguages(); renderPaper(); persist();
+  });
+  document.getElementById('o-font').addEventListener('change', function (event) {
+    state.options.font = event.target.value;
+    renderPaper(); persist();
+  });
+  document.getElementById('o-page').addEventListener('change', function (event) {
+    state.options.page = event.target.value;
+    applyPageSize(); renderPaper(); persist();
+  });
+
+  function applyPageSize() {
+    var letter = state.options.page === 'letter';
+    var root = document.documentElement.style;
+    root.setProperty('--paper-w', letter ? '216mm' : '210mm');
+    root.setProperty('--paper-h', letter ? '279mm' : '297mm');
+    document.getElementById('pageCss').textContent =
+      '@page{size:' + (letter ? 'Letter' : 'A4') + ';margin:0}';
+  }
+
+  document.querySelectorAll('.swatch').forEach(function (button) {
+    button.addEventListener('click', function () {
+      state.options.accent = button.getAttribute('data-accent');
+      document.querySelectorAll('.swatch').forEach(function (other) {
+        other.classList.toggle('on', other === button);
+      });
+      renderPaper(); persist();
+    });
+  });
+
+  /* ---------------------------------------------------------------- photo */
+
+  document.getElementById('p-photo').addEventListener('change', function (event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 12 * 1024 * 1024) { alert(t('photoBig')); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var image = new Image();
+      image.onload = function () {
+        // The stored copy is small on purpose: a CV photo is 300 by 380 pixels
+        // on paper at most, and localStorage is not a photo album.
+        var max = 420;
+        var scale = Math.min(1, max / Math.max(image.width, image.height));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        state.person.photo = canvas.toDataURL('image/jpeg', 0.85);
+        renderPaper(); persist();
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('p-photo-clear').addEventListener('click', function () {
+    state.person.photo = '';
+    document.getElementById('p-photo').value = '';
+    renderPaper(); persist();
+  });
+
+  /* ------------------------------------------------------------ save/load */
+
+  function slug(text) {
+    return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  }
+
+  document.getElementById('btn-json').addEventListener('click', function () {
+    var body = JSON.stringify(state, null, 2);
+    var blob = new Blob([body], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'cv-' + (slug(state.person.name) || 'copy') + '.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  });
+
+  document.getElementById('import-json').addEventListener('change', function (event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(String(reader.result));
+        if (!parsed || typeof parsed !== 'object' || !('person' in parsed)) throw new Error('shape');
+        state = M.normalize(parsed);
+        syncStatic(); renderLists(); renderPaper(); persist();
+      } catch (error) {
+        alert(t('importBad'));
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', function () {
+    if (!window.confirm(t('confirmClear'))) return;
+    var options = state.options;
+    state = M.blank();
+    state.options = options;
+    syncStatic(); renderLists(); renderPaper(); persist();
+  });
+
+  document.getElementById('btn-sample').addEventListener('click', function () {
+    var options = state.options;
+    state = M.sample();
+    state.options = options;
+    syncStatic(); renderLists(); renderPaper(); persist();
+  });
+
+  document.getElementById('btn-print').addEventListener('click', function () {
+    window.print();
+  });
+
+  /* --------------------------------------------------------------- chrome */
+
+  document.getElementById('theme').addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('cv-builder.theme', next); } catch (error) { /* ignore */ }
+  });
+
+  var LANG_NAMES = { en: 'EN', ro: 'RO', 'sr-latn': 'SR', 'sr-cyrl': 'SR ћир' };
+
+  function applyLanguage(next, remember) {
+    lang = LOCALES[next] ? next : 'en';
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (node) {
+      node.textContent = t(node.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function (node) {
+      node.setAttribute('placeholder', t(node.getAttribute('data-i18n-placeholder')));
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(function (node) {
+      node.setAttribute('aria-label', t(node.getAttribute('data-i18n-aria-label')));
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (node) {
+      node.innerHTML = t(node.getAttribute('data-i18n-html'));
+    });
+    var select = document.getElementById('lang');
+    select.innerHTML = Object.keys(LOCALES).map(function (code) {
+      return '<option value="' + code + '"' + (code === lang ? ' selected' : '') + '>' +
+        (LANG_NAMES[code] || code) + '</option>';
+    }).join('');
+    if (remember) { try { localStorage.setItem('cv-builder.lang', lang); } catch (error) { /* ignore */ } }
+    renderLists();
+    renderPaper();
+  }
+
+  document.getElementById('lang').addEventListener('change', function (event) {
+    applyLanguage(event.target.value, true);
+  });
+
+  window.addEventListener('resize', fit);
+
+  /* ------------------------------------------------------------------ boot */
+
+  var saved = '';
+  try { saved = localStorage.getItem('cv-builder.lang') || ''; } catch (error) { saved = ''; }
+  if (!saved) {
+    var guess = (navigator.language || 'en').toLowerCase();
+    saved = guess.indexOf('ro') === 0 ? 'ro' : (guess.indexOf('sr') === 0 ? 'sr-latn' : 'en');
+  }
+  syncStatic();
+  applyLanguage(saved, false);
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* offline is a bonus */ });
+    });
+  }
+}());
+</script>
+<!-- CV Builder 1.0.0 · single file build -->
+</body>
+</html>
