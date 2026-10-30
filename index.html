@@ -221,8 +221,24 @@ html[data-theme="light"] .sun{display:none}
   .paper + .paper{page-break-before:always}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+
+
+  /* regula casei: tinte de atingere pe mobil */
+  @media (pointer: coarse), (max-width: 700px) {
+    .skip { min-height: 34px; display: inline-flex; align-items: center; }
+    .brand { min-height: 34px; display: inline-flex; align-items: center; }
+    #btn-sample { min-height: 34px; display: inline-flex; align-items: center; }
+    #add-exp { min-height: 34px; display: inline-flex; align-items: center; }
+    #add-edu { min-height: 34px; display: inline-flex; align-items: center; }
+    #add-lang { min-height: 34px; display: inline-flex; align-items: center; }
+    #add-cert { min-height: 34px; display: inline-flex; align-items: center; }
+    .swatch.on { min-height: 34px; display: inline-flex; align-items: center; }
+    .swatch { min-height: 34px; display: inline-flex; align-items: center; }
+    a { padding-block: 9px; }
+  }
 </style>
-<style id="pageCss">@page{size:A4;margin:0}</style>
+<style id="pageCss">@page{size:A4;margin:0}
+</style>
 <script>
 /* Paint the stored theme before the body exists, so a reload never flashes. */
 (function () {
