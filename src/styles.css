@@ -190,7 +190,7 @@ html[data-theme="light"] .sun{display:none}
 @media print{
   @page{}
   html,body{background:#fff !important}
-  .topbar,.editor,.about,.foot,.viewer-bar,.print-hint,.skip{display:none !important}
+  .topbar,.editor,.about,.foot,.viewer-bar,.print-hint,.skip,#td-install-section,#td-install-dialog{display:none !important}
   .layout{display:block;padding:0;margin:0;max-width:none;width:auto}
   .wrap{max-width:none;padding:0;margin:0}
   .viewer{position:static}

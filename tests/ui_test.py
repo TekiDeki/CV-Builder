@@ -198,6 +198,7 @@ def main() -> int:
         check("the editor steps aside when printing", not page.locator(".editor").is_visible())
         check("the paper is visible when printing", page.locator("#paper").is_visible())
         check("the paper is not scaled when printing", page.eval_on_selector("#paper", "el => getComputedStyle(el).transform") in ("none", "matrix(1, 0, 0, 1, 0, 0)"))
+        check("install controls stay out of the printout", not page.locator("#td-install-section").is_visible() and not page.locator("#td-install-dialog").is_visible())
         page.emulate_media(media="screen")
 
         # offline shell
